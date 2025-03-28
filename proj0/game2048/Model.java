@@ -5,7 +5,7 @@ import java.util.Observable;
 
 
 /** The state of a game of 2048.
- *  @author TODO: YOUR NAME HERE
+ *  @author Shihchia Young
  */
 public class Model extends Observable {
     /** Current contents of the board. */
@@ -110,13 +110,61 @@ public class Model extends Observable {
         boolean changed;
         changed = false;
 
-        // TODO: Modify this.board (and perhaps this.score) to account
+        // Modify this.board (and perhaps this.score) to account
         // for the tilt to the Side SIDE. If the board changed, set the
         // changed local variable to true.
+        if (board == null) {
+            return false;
+        }
 
+        board.setViewingPerspective(side);
+
+        for (int col = 0; col < board.size(); col++) {
+            changed = colMove(col, board) || changed;
+        }
+        board.setViewingPerspective(Side.NORTH);
         checkGameOver();
         if (changed) {
             setChanged();
+        }
+        return changed;
+    }
+
+    private boolean colMove(int col, Board b) {
+        int size = b.size();
+        boolean changed = false;
+        boolean[] merged = new boolean[size];
+
+        for (int row = size - 1; row >= 0; row--) {
+            Tile tile = b.tile(col, row);
+            if (tile == null) {
+                continue;
+            }
+
+            // find target row index
+            int targetRow = row;
+            while (targetRow + 1 < size) {
+                Tile targetTile = b.tile(col, targetRow + 1);
+                if (targetTile == null) {
+                    // if up cell is empty, move up one step
+                    targetRow++;
+                } else if (targetTile.value() == tile.value() && !merged[targetRow + 1]) {
+                    // if up cell is the same value and has not been merged, then merge
+                    targetRow++;
+                    break;
+                } else {
+                    // if up cell is not empty and not the same value, stop/maintain
+                    break;
+                }
+            }
+            if (targetRow != row) {
+                boolean mergedResult = b.move(col, targetRow, tile);
+                if (mergedResult) {
+                    score += tile.value() * 2;
+                    merged[targetRow] = true;
+                }
+                changed = true;
+            }
         }
         return changed;
     }
@@ -137,7 +185,14 @@ public class Model extends Observable {
      *  Empty spaces are stored as null.
      * */
     public static boolean emptySpaceExists(Board b) {
-        // TODO: Fill in this function.
+        // Fill in this function.
+        for (int col = 0; col < b.size(); col++) {
+            for (int row = 0; row < b.size(); row++) {
+                if (b.tile(col, row) == null) {
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -147,7 +202,14 @@ public class Model extends Observable {
      * given a Tile object t, we get its value with t.value().
      */
     public static boolean maxTileExists(Board b) {
-        // TODO: Fill in this function.
+        // Fill in this function.
+        for (int col = 0; col < b.size(); col++) {
+            for (int row = 0; row < b.size(); row++) {
+                if (b.tile(col, row) != null && b.tile(col, row).value() == MAX_PIECE) {
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -158,13 +220,36 @@ public class Model extends Observable {
      * 2. There are two adjacent tiles with the same value.
      */
     public static boolean atLeastOneMoveExists(Board b) {
-        // TODO: Fill in this function.
+        // Fill in this function.
+        int size = b.size();
+        if (emptySpaceExists(b)) {
+            return true;
+        }
+        for (int col = 0; col < size; col++) {
+            for (int row = 0; row < size; row++) {
+                Tile currentTile = b.tile(col, row);
+                // check Right
+                if (col < size - 1) {
+                    Tile rightTile = b.tile(col + 1, row);
+                    if (currentTile != null && rightTile != null && currentTile.value() == rightTile.value()) {
+                        return true;
+                    }
+                }
+                // check Down
+                if (row < size - 1) {
+                    Tile downTile = b.tile(col, row + 1);
+                    if (currentTile != null && downTile != null && currentTile.value() == downTile.value()) {
+                        return true;
+                    }
+                }
+            }
+        }
         return false;
     }
 
 
     @Override
-     /** Returns the model as a string, used for debugging. */
+    /** Returns the model as a string, used for debugging. */
     public String toString() {
         Formatter out = new Formatter();
         out.format("%n[%n");
